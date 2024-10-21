@@ -33,7 +33,7 @@ void *socket_loop(void *args)
     char response[1024] =
         "HTTP/1.1 200 OK\nContent-Type: text/html; charset=utf-8\n\n";
 
-    FILE *file = fopen("index.html", "r");
+    FILE *file = fopen("public/index.html", "r");
 
     while (fgets(response + strlen(response), 100, file))
         ;
