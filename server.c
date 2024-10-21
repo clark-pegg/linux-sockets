@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 
 static volatile sig_atomic_t keep_running = 1;
 
@@ -19,6 +20,8 @@ static void sig_handler(int _)
 
 void *socket_loop(void *args)
 {
+    signal(SIGINT, sig_handler);
+
     struct sockaddr_in address;
     socklen_t addrlen = sizeof(address);
 
@@ -28,11 +31,17 @@ void *socket_loop(void *args)
 
     int sockfd = *(int *)args;
     char response[1024] =
-        "HTTP/1.1 200 OK\nContent-Type: text/html; charset=utf-8\n\nHello!";
+        "HTTP/1.1 200 OK\nContent-Type: text/html; charset=utf-8\n\n";
+
+    FILE *file = fopen("index.html", "r");
+
+    while (fgets(response + strlen(response), 100, file))
+        ;
 
     while (keep_running)
     {
         int new_socket = accept(sockfd, (struct sockaddr *)&address, &addrlen);
+        printf("Connection from: %s\n", inet_ntoa(address.sin_addr));
         // recv(new_socket, buffer, 1024 - 1, 0);
         // printf("%s\n", buffer);
         send(new_socket, response, strlen(response), 0);
@@ -50,20 +59,23 @@ int main()
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(8080);
 
-    bind(sockfd, (struct sockaddr *)&address, addrlen);
+    int fail = bind(sockfd, (struct sockaddr *)&address, addrlen);
+
+    if (fail)
+    {
+        fprintf(stderr, "Couldn't bind to socket!\n");
+        return 1;
+    }
 
     listen(sockfd, 3);
-
-    FILE *file = fopen("index.html", "r");
-
-    // while (fgets(response + strlen(response), 100, file))
-    //     ;
 
     void *args = malloc(sizeof(int *));
     args = &sockfd;
 
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, &socket_loop, args);
+
+    printf("Server running!\n");
 
     while (keep_running)
     {
