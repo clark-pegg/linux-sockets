@@ -1,7 +1,7 @@
 # Basic C Web Server
 
 ## About
-A basic C webserver that will hopefully eventually be able to serve a webpage on GitHub
+A basic C webserver that I will use to host my portfolio on AWS
 
 ## Things to Add
 If path without file extension is tried, try again with ".html" extension\
