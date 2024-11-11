@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include "http-headers.h"
 
 static volatile sig_atomic_t keep_running = 1;
 
@@ -18,35 +19,6 @@ static void sig_handler(int _)
 {
     (void)_;
     keep_running = 0;
-}
-
-char ** httpHeaderReader(char * header, int headerLength){
-    char ** headerInformation = malloc(sizeof(char *) * 2);
-
-    int i;
-    for(i = 0; header[i] != ' '; i++);
-
-    header[i] = '\0';
-
-    headerInformation[0] = malloc(sizeof(char) * (i+1));
-    strcpy(headerInformation[0], header);
-
-    header = header+i+1;
-
-    for(i = 0; header[i] != ' '; i++);
-
-    header[i] = '\0';
-
-    if(!strcmp(header, "/")){
-        headerInformation[1] = malloc(strlen("/index.html")+1);
-        strcpy(headerInformation[1], "/index.html");
-    }
-    else{
-        headerInformation[1] = malloc(sizeof(char) * (i+1));
-        strcpy(headerInformation[1], header);
-    }
-
-    return headerInformation;
 }
 
 void *socket_loop(void *args)
@@ -65,23 +37,25 @@ void *socket_loop(void *args)
         printf("Connection from: %s\n", inet_ntoa(address.sin_addr));
 
         int read = recv(new_socket, buffer, 1024 - 1, 0);
-        
-        char ** headerInfo = httpHeaderReader(buffer, read);
 
-        char * filepath = malloc(strlen("public") + strlen(headerInfo[1]) + 1);
+        char **headerInfo = httpHeaderReader(buffer, read);
+
+        char *filepath = malloc(strlen("public") + strlen(headerInfo[1]) + 1);
         filepath[0] = '\0';
         strcat(filepath, "public");
         strcat(filepath, headerInfo[1]);
-            
+
         FILE *file = fopen(filepath, "rb");
 
-        char * response = malloc(sizeof(char) * 1024);
+        char *response = malloc(sizeof(char) * 1024);
         response[0] = '\0';
 
-        if(!strcmp(filepath, "public/favicon.ico")){
+        if (!strcmp(filepath, "public/favicon.ico"))
+        {
             strcpy(response, "HTTP/1.1 200 OK\nContent-Type: image/*\n\n");
         }
-        else{
+        else
+        {
             strcpy(response, "HTTP/1.1 200 OK\nContent-Type: text/html; charset=utf-8\n\n");
         }
 
@@ -120,8 +94,8 @@ int main()
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 
     address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(8080);
+    inet_aton("192.168.2.118", &address.sin_addr);
+    address.sin_port = htons(80);
 
     int fail = bind(sockfd, (struct sockaddr *)&address, addrlen);
 
