@@ -1,0 +1,1 @@
+char **httpHeaderReader(char *header, int headerLength);
